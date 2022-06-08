@@ -145,7 +145,7 @@ dmypy.json
 cython_debug/
 
 # ignore our credentials file
-credentials_sample.yml
+credentials.yml
 
 # PyCharm
 #  JetBrains specific template is maintainted in a separate JetBrains.gitignore that can
