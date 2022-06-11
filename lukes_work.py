@@ -53,6 +53,7 @@ def add_actuals(prediction_frame: pd.DataFrame, training_file_name: NamedTempora
     training_data.rename(columns={target: f"Actual Value"}, inplace=True)
     return pd.concat([prediction_frame, training_data], axis=0).sort_values(['Store_ID', 'Date'])
 
+
 def fix_column_name(col: str):
     new_col = col.replace(" ", "_")
     new_col = new_col.lower()
@@ -113,4 +114,92 @@ if __name__ == '__main__':
 
 
 ##########################################################
+
+#%%
+from numpy import result_type
+import pandas as pd
+from sqlalchemy import create_engine
+from pathlib import Path
+
+result_data = pd.read_csv("result-629e16618a6af76b7e19b50e(1).csv").assign(row_id=lambda df: df.index)
+explanation_columns = [ col for col in result_data.columns if col.startswith("EXPLANATION_")]
+other_columns = [col for col in result_data.columns if col not in explanation_columns]
+input_data = pd.read_csv("/Users/luke.shulman/Downloads/DR Demo Insurance Exposure Scoring_629a6bf7e1c91164fe23d74f.csv")
+#%%
+# engine = create_engine("mssql+pyodbc://brent:P@ssword123@MYMSSQL")
+# engine = engine.connect()
+# # engine.execute("select * from demo;")
+
+# %%
+def process_row(row):
+    output_frame = {
+        "Feature Name": [],
+        "Feature Importance-Strength": [],
+        "Feature Importance-Current Value": [],
+        "ROW_ID": [],
+    }
+    row = row._asdict()
+    for r in range(4):
+        col = r + 1
+
+        output_frame["Feature Name"].append(
+            row[f"EXPLANATION_{col}_FEATURE_NAME"]
+        )
+        output_frame["Feature Importance-Strength"].append(
+            row[f"EXPLANATION_{col}_STRENGTH"]
+        )
+        output_frame["Feature Importance-Current Value"].append(
+            row[f"EXPLANATION_{col}_ACTUAL_VALUE"]
+        )
+        output_frame["ROW_ID"].append(row["row_id"])
+    return pd.DataFrame(output_frame)
+
+
+frames = [process_row(row) for row in result_data.itertuples()]
+pe_data = pd.concat(frames, axis=0)
+# %%
+import re
+from shapely import wkt
+import numpy as np
+
+
+def latlng(row, latitude=False):
+    w = row.wkt
+    if isinstance(w, str):
+        point = wkt.loads(row.wkt)
+        if latitude:
+            return point.y
+        else:
+            return point.x
+    else:
+        return None
+
+
+
+
+out_data = result_data[other_columns]
+
+out_data.to_csv("results/prediction_data.csv", index=False)
+# out_data.to_sql("incurred_cars_prediction_data", con=engine, if_exists='replace')
+outp = Path("sql_schema.sql")
+
+with open(outp, 'w') as p:
+    p.write(pd.io.sql.get_schema(out_data.reset_index(), name="prediction_data"))
+    p.write('''
+    __________________
+    ''')
+
+    p.write(pd.io.sql.get_schema(pe_data.reset_index(), name="explanation_data"))
+    p.write('''
+    __________________
+    ''')
+    p.write(pd.io.sql.get_schema(input_data.reset_index(), name="input_data_claims"))
+
+print()
+
+pe_data.to_csv("results/explanation_data.csv", index=False)
+# pe_data.to_sql("incurred_cars_explanation_data", con=engine, if_exists='replace')
+
+# %%
+
 

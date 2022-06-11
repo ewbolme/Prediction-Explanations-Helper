@@ -147,6 +147,13 @@ cython_debug/
 # ignore our credentials file
 credentials.yml
 
+# Ignore our testing file for python
+dev_testing.py
+scratch.txt
+
+# Ignore everything in data folder
+data/
+
 # PyCharm
 #  JetBrains specific template is maintainted in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
