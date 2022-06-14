@@ -17,7 +17,8 @@ def submit_csv_batch(
         },
         # If explanations are required, uncomment the line below
         max_explanations=max_explanations_returned,
-        download_timeout=max_wait
+        download_timeout=max_wait,
+        passthrough_columns_set="all"
         # Uncomment this for Prediction Warnings, if enabled for your deployment.
         # prediction_warning_enabled=True
     )

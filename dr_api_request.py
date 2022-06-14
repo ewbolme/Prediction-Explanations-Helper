@@ -41,6 +41,10 @@ class DR_Pred_Explan_Pipeline:
     temp_output: str = "temp_file_output.csv"
     max_explanations: int = 50
     shap_bool: bool = False
+    last_task_run: str = field(init=False)
+
+    def __post_init__(self):
+        last_task_run = "initialized"
 
     def load_data_from_csv(self, input_filename: str) -> None:
         self.data = get_from_csv(input_filename)

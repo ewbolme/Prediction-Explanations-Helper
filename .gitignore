@@ -150,6 +150,7 @@ credentials.yml
 # Ignore our testing file for python
 dev_testing.py
 scratch.txt
+.DS_Store
 
 # Ignore everything in data folder
 data/
