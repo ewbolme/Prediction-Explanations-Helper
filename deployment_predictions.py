@@ -1,10 +1,21 @@
 import datarobot as dr
 import pandas as pd
+import os
 
 
 def submit_csv_batch(
-    deployment_id, input_file, output_file, max_explanations_returned, max_wait
+    deployment_id: str,
+    input_file: str,
+    output_file: str,
+    max_explanations_returned: int,
+    max_wait: int,
+    dr_server_helper,
 ) -> pd.DataFrame:
+
+    if dr_server_helper is not None:
+        dr_server_info = dr_server_helper.output_dict()
+
+    # TODO add using server helper in here to access alternative DataRobot host.
     job = dr.BatchPredictionJob.score(
         deployment=deployment_id,
         intake_settings={
@@ -18,11 +29,16 @@ def submit_csv_batch(
         # If explanations are required, uncomment the line below
         max_explanations=max_explanations_returned,
         download_timeout=max_wait,
-        passthrough_columns_set="all"
+        passthrough_columns_set="all",
         # Uncomment this for Prediction Warnings, if enabled for your deployment.
         # prediction_warning_enabled=True
+        prediction_instance=dr_server_info,
     )
 
     job.wait_for_completion()
 
-    return pd.read_csv(output_file)
+    os.remove(input_file)
+    output_data = pd.read_csv(output_file)
+    os.remove(output_file)
+
+    return output_data

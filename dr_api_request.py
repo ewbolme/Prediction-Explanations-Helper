@@ -1,11 +1,14 @@
 from dataclasses import dataclass, field
 import pandas as pd
 import datarobot as dr
-import os
-from typing import List, Optional
+from typing import Optional
 from deployment_predictions import submit_csv_batch
 from make_project_predictions import submit_request_to_model
 from data_sources import get_from_csv
+from process_explanations import (
+    process_deployment_explanations_flat,
+    return_melted_dataframe,
+)
 
 
 @dataclass
@@ -34,6 +37,26 @@ class DR_Connection:
 
 
 @dataclass
+class DR_Server_Helper:
+    hostName: str
+    sslEnabled: str
+    datarobotKey: str
+    apiKey: str
+
+    def output_dict(self):
+        return {
+            "hostName": self.hostName,
+            "sslEnabled": self.sslEnabled,
+            "datarobotKey": self.datarobotKey,
+            "apiKey": self.apiKey,
+        }
+
+    def __post_init__():
+        # TODO validate data
+        pass
+
+
+@dataclass
 class DR_Pred_Explan_Pipeline:
     connection: Optional[DR_Connection] = field(repr=False)
     data: Optional[pd.DataFrame] = field(repr=False)
@@ -42,14 +65,18 @@ class DR_Pred_Explan_Pipeline:
     max_explanations: int = 50
     shap_bool: bool = False
     last_task_run: str = field(init=False)
+    association_id: str = None
 
+    # TODO add an enumerator for this? - actually use it in tasks
     def __post_init__(self):
         last_task_run = "initialized"
 
     def load_data_from_csv(self, input_filename: str) -> None:
         self.data = get_from_csv(input_filename)
 
-    def deployment_request(self, deployment_id, max_wait=300) -> None:
+    def deployment_request(
+        self, deployment_id, max_wait=300, dr_server_helper: DR_Server_Helper = None
+    ) -> None:
         """Makes a batch prediction request to a DataRobot deployment - returns a dataframe with predictions and max_explanation prediction explanations"""
 
         self.data.to_csv(self.temp_input, sep=",")
@@ -59,11 +86,10 @@ class DR_Pred_Explan_Pipeline:
             self.temp_output,
             self.max_explanations,
             max_wait,
+            dr_server_helper,
         )
 
         # TODO do this anyway even if above steps fail
-        os.remove(self.temp_input)
-        os.remove(self.temp_output)
 
     def project_request(self, project_id, model_id) -> None:
         """Makes a prediction request (along with prediction explanations) to a DataRobot model in a project returns a new pandas dataframe with the predictions and prediction explanations"""
@@ -75,11 +101,12 @@ class DR_Pred_Explan_Pipeline:
             shap_bool=self.shap_bool,
         )
 
-        pass
+    # TODO Shap base values?
+    def process_deployment_explanations_flat_file(self) -> None:
+        self.data = process_deployment_explanations_flat(self.data)
 
-    def process_explanations(self, project_id) -> None:
-        """processes the prediction explanations"""
-        pass
+    def process_deployment_explanations_melted(self) -> None:
+        self.data = return_melted_dataframe(self.data)
 
     def output_explanations_as_json(self, project_id):
         """Makes a prediction request (along with prediction explanations) to a DataRobot model in a project"""
