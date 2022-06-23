@@ -6,7 +6,7 @@ from deployment_predictions import submit_csv_batch
 from make_project_predictions import submit_request_to_model
 from data_sources import get_from_csv
 from process_explanations import (
-    process_deployment_explanations_flat,
+    return_explanations_flat,
     return_melted_dataframe,
 )
 
@@ -18,9 +18,11 @@ class DR_Connection:
     api_endpoint: str
     api_key: str
     ssl_insecure: str
+    client: dr.Client = field(init=False)
 
+    # TODO - do we need this? can I just use or have a subclass of dr.Client
     def create_connection(self) -> None:
-        dr.Client(
+        self.client = dr.Client(
             endpoint=self.api_endpoint,
             token=self.api_key,
             ssl_verify=not self.ssl_insecure,
@@ -32,28 +34,7 @@ class DR_Connection:
         pass
 
     def close_connection(self) -> None:
-        # TODO code to close connection here - can we do this?
-        pass
-
-
-@dataclass
-class DR_Server_Helper:
-    hostName: str
-    sslEnabled: str
-    datarobotKey: str
-    apiKey: str
-
-    def output_dict(self):
-        return {
-            "hostName": self.hostName,
-            "sslEnabled": self.sslEnabled,
-            "datarobotKey": self.datarobotKey,
-            "apiKey": self.apiKey,
-        }
-
-    def __post_init__():
-        # TODO validate data
-        pass
+        self.client.close()
 
 
 @dataclass
@@ -69,14 +50,12 @@ class DR_Pred_Explan_Pipeline:
 
     # TODO add an enumerator for this? - actually use it in tasks
     def __post_init__(self):
-        last_task_run = "initialized"
+        self.last_task_run = "initialized"
 
     def load_data_from_csv(self, input_filename: str) -> None:
         self.data = get_from_csv(input_filename)
 
-    def deployment_request(
-        self, deployment_id, max_wait=300, dr_server_helper: DR_Server_Helper = None
-    ) -> None:
+    def deployment_request(self, deployment_id, max_wait=300) -> None:
         """Makes a batch prediction request to a DataRobot deployment - returns a dataframe with predictions and max_explanation prediction explanations"""
 
         self.data.to_csv(self.temp_input, sep=",")
@@ -86,10 +65,7 @@ class DR_Pred_Explan_Pipeline:
             self.temp_output,
             self.max_explanations,
             max_wait,
-            dr_server_helper,
         )
-
-        # TODO do this anyway even if above steps fail
 
     def project_request(self, project_id, model_id) -> None:
         """Makes a prediction request (along with prediction explanations) to a DataRobot model in a project returns a new pandas dataframe with the predictions and prediction explanations"""
@@ -103,7 +79,7 @@ class DR_Pred_Explan_Pipeline:
 
     # TODO Shap base values?
     def process_deployment_explanations_flat_file(self) -> None:
-        self.data = process_deployment_explanations_flat(self.data)
+        self.data = return_explanations_flat(self.data)
 
     def process_deployment_explanations_melted(self) -> None:
         self.data = return_melted_dataframe(self.data)

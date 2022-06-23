@@ -9,11 +9,7 @@ def submit_csv_batch(
     output_file: str,
     max_explanations_returned: int,
     max_wait: int,
-    dr_server_helper,
 ) -> pd.DataFrame:
-
-    if dr_server_helper is not None:
-        dr_server_info = dr_server_helper.output_dict()
 
     # TODO add using server helper in here to access alternative DataRobot host.
     job = dr.BatchPredictionJob.score(
@@ -32,7 +28,6 @@ def submit_csv_batch(
         passthrough_columns_set="all",
         # Uncomment this for Prediction Warnings, if enabled for your deployment.
         # prediction_warning_enabled=True
-        prediction_instance=dr_server_info,
     )
 
     job.wait_for_completion()
