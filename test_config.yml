@@ -1,5 +1,0 @@
-pred_pull_tests:
-  api_key: "..."
-  api_endpoint: "..."
-  ssl_insecure: False
-  test_data: "./data/test_proj_output.csv"
